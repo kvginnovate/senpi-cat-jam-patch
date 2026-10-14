@@ -34,27 +34,26 @@ FILES=(
   "$SENPI_DIR/dist/bundle/chunks/session-worker.js"
 )
 
-for FILE in "${FILES[@]}"; do
-  if [ ! -f "$FILE" ]; then
-    echo "WARNING: File not found, skipping: $FILE"
-    continue
-  fi
-
-  # Check if already patched
+patch_one() {
+  local FILE="$1"
+  [ -f "$FILE" ] || return 0
   if grep -q 'provider:"opencode-go".*cat-jam-free' "$FILE" 2>/dev/null; then
     echo "Already patched: $FILE"
-    continue
+    return 0
   fi
-
-  # Make backup if not exists
-  if [ ! -f "$FILE.bak" ]; then
-    cp "$FILE" "$FILE.bak"
-    echo "Backup created: $FILE.bak"
-  fi
-
-  # Apply patch
+  [ -f "$FILE.bak" ] || { cp "$FILE" "$FILE.bak"; echo "Backup created: $FILE.bak"; }
   sed -i "s|$ANCHOR|$NEW_MODEL$ANCHOR|g" "$FILE"
   echo "Patched: $FILE"
+}
+
+for FILE in "${FILES[@]}"; do
+  patch_one "$FILE"
+done
+
+for RUNTIME_CHUNKS in "$HOME/.omo/agent/runtime/"*/dist/bundle/chunks; do
+  [ -d "$RUNTIME_CHUNKS" ] || continue
+  patch_one "$RUNTIME_CHUNKS/chunk-NNQ7DPUD.js"
+  patch_one "$RUNTIME_CHUNKS/session-worker.js"
 done
 
 echo ""
